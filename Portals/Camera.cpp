@@ -29,15 +29,15 @@ void Camera::Update(float dt)
 	float speed = movementSpeed * dt;
 
 	// Sprinting
-	if (input.KeyDown(VK_SHIFT)) speed *= 3;
+	if (input.KeyDown(VK_CONTROL)) speed *= 3;
 
 	// Movement
 	if (input.KeyDown('W')) { transform.MoveRelative(0, 0, speed); }
 	if (input.KeyDown('S')) { transform.MoveRelative(0, 0, -speed); }
 	if (input.KeyDown('A')) { transform.MoveRelative(-speed, 0, 0); }
 	if (input.KeyDown('D')) { transform.MoveRelative(speed, 0, 0); }
-	if (input.KeyDown('Q')) { transform.MoveAbsolute(0, -speed, 0); }
-	if (input.KeyDown('E')) { transform.MoveAbsolute(0, speed, 0); }
+	if (input.KeyDown(VK_SHIFT)) { transform.MoveAbsolute(0, -speed, 0); }
+	if (input.KeyDown(VK_SPACE)) { transform.MoveAbsolute(0, speed, 0); }
 
 	// Control rotation of the camera
 	if (input.MouseLeftDown())

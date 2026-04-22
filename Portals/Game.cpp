@@ -7,6 +7,7 @@
 #include <d3dcompiler.h>
 #include <math.h>
 #include <iostream>
+#include "MeshFactory.h"
 
 // For the DirectX Math library
 using namespace DirectX;
@@ -52,11 +53,11 @@ Game::~Game()
 	for (Mesh* mesh : meshes) {
 		delete mesh;
 	}
-	for (Entity* entity : entities) {
-		delete entity;
+	for (const auto& pair: entities) {
+		delete pair.second;
 	}
-	for (Material* material : materials) {
-		delete material;
+	for (const auto& pair : materials) {
+		delete pair.second;
 	}
 
 	delete camera;
@@ -91,7 +92,7 @@ void Game::Init()
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Create the camera once we have the aspect ratio
-	camera = new Camera(-10, 2, 5, 5.0f, .5f, XM_PIDIV4, (float)width / height);
+	camera = new Camera(0, 2, 0, 5.0f, .5f, XM_PIDIV4, (float)width / height);
 	camera->GetTransform()->SetPitchYawRoll(0, PI / 2, 0);
 	drawSkyBox = true;
 	debugPortals = true;
@@ -189,7 +190,7 @@ void Game::LoadShaders()
 }
 
 // Create the basic materials for assignment 5
-void Game::CreateMaterials() 
+void Game::CreateMaterials()
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobblestoneAlbedoRSV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobblestoneSpecularRSV;
@@ -205,7 +206,12 @@ void Game::CreateMaterials()
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalSpecularRSV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalNormalRSV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMetalnessRSV;
-	
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodAlbedoRSV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodSpecularRSV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodNormalRSV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> woodMetalnessRSV;
+
 	// Load textures.
 	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/cobblestone_albedo.png").c_str(), 0, cobblestoneAlbedoRSV.GetAddressOf());
 	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/cobblestone_roughness.png").c_str(), 0, cobblestoneSpecularRSV.GetAddressOf());
@@ -222,6 +228,11 @@ void Game::CreateMaterials()
 	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/floor_normals.png").c_str(), 0, metalNormalRSV.GetAddressOf());
 	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/floor_metal.png").c_str(), 0, metalMetalnessRSV.GetAddressOf());
 
+	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/wood_albedo.png").c_str(), 0, woodAlbedoRSV.GetAddressOf());
+	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/wood_roughness.png").c_str(), 0, woodSpecularRSV.GetAddressOf());
+	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/wood_normals.png").c_str(), 0, woodNormalRSV.GetAddressOf());
+	CreateWICTextureFromFile(device.Get(), context.Get(), GetFullPathTo_Wide(L"../../Assets/Textures/wood_metal.png").c_str(), 0, woodMetalnessRSV.GetAddressOf());
+
 	D3D11_SAMPLER_DESC sampDesc = {};
 	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP; // What happens outside the 0-1 uv range?
 	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -232,36 +243,43 @@ void Game::CreateMaterials()
 	device->CreateSamplerState(&sampDesc, sampler.GetAddressOf());
 
 	// Cobblestone Material
-	materials.push_back(new Material(XMFLOAT4(1, 1, 1, 0), lightingPixelShader, vertexShader, 0.0f));
-	materials[0]->AddSampler("BasicSampler", sampler);
-	materials[0]->AddTextureSRV("Albedo", cobblestoneAlbedoRSV);
-	materials[0]->AddTextureSRV("RoughnessMap", cobblestoneSpecularRSV);
-	materials[0]->AddTextureSRV("NormalMap", cobblestoneNormalRSV);
-	materials[0]->AddTextureSRV("MetalnessMap", cobblestoneMetalnessRSV);
+	materials.insert({ "cobblestone", new Material(XMFLOAT4(1, 1, 1, 0), lightingPixelShader, vertexShader, 0.0f) });
+	materials["cobblestone"]->AddSampler("BasicSampler", sampler);
+	materials["cobblestone"]->AddTextureSRV("Albedo", cobblestoneAlbedoRSV);
+	materials["cobblestone"]->AddTextureSRV("RoughnessMap", cobblestoneSpecularRSV);
+	materials["cobblestone"]->AddTextureSRV("NormalMap", cobblestoneNormalRSV);
+	materials["cobblestone"]->AddTextureSRV("MetalnessMap", cobblestoneMetalnessRSV);
 
 	// Floor Material
-	materials.push_back(new Material(XMFLOAT4(1, 1, 1, 0), lightingPixelShader, vertexShader, 0.0f));
-	materials[1]->AddSampler("BasicSampler", sampler);
-	materials[1]->AddTextureSRV("Albedo", floorAlbedoRSV);
-	materials[1]->AddTextureSRV("RoughnessMap", floorSpecularRSV);
-	materials[1]->AddTextureSRV("NormalMap", floorNormalRSV);
-	materials[1]->AddTextureSRV("MetalnessMap", floorMetalnessRSV);
+	materials.insert({"floor", new Material(XMFLOAT4(1, 1, 1, 0), lightingPixelShader, vertexShader, 0.0f)});
+	materials["floor"]->AddSampler("BasicSampler", sampler);
+	materials["floor"]->AddTextureSRV("Albedo", floorAlbedoRSV);
+	materials["floor"]->AddTextureSRV("RoughnessMap", floorSpecularRSV);
+	materials["floor"]->AddTextureSRV("NormalMap", floorNormalRSV);
+	materials["floor"]->AddTextureSRV("MetalnessMap", floorMetalnessRSV);
 
 	// Metal Material
-	materials.push_back(new Material(XMFLOAT4(1, 1, 1, 0), lightingPixelShader, vertexShader, 0.0f));
-	materials[2]->AddSampler("BasicSampler", sampler);
-	materials[2]->AddTextureSRV("Albedo", metalAlbedoRSV);
-	materials[2]->AddTextureSRV("RoughnessMap", metalSpecularRSV);
-	materials[2]->AddTextureSRV("NormalMap", metalNormalRSV);
-	materials[2]->AddTextureSRV("MetalnessMap", metalMetalnessRSV);
+	materials.insert({ "metal", new Material(XMFLOAT4(1, 1, 1, 0), lightingPixelShader, vertexShader, 0.0f) });
+	materials["metal"]->AddSampler("BasicSampler", sampler);
+	materials["metal"]->AddTextureSRV("Albedo", metalAlbedoRSV);
+	materials["metal"]->AddTextureSRV("RoughnessMap", metalSpecularRSV);
+	materials["metal"]->AddTextureSRV("NormalMap", metalNormalRSV);
+	materials["metal"]->AddTextureSRV("MetalnessMap", metalMetalnessRSV);
+
+	materials.insert({ "wood", new Material(XMFLOAT4(1, 1, 1, 0), lightingPixelShader, vertexShader, 0.0f) });
+	materials["wood"]->AddSampler("BasicSampler", sampler);
+	materials["wood"]->AddTextureSRV("Albedo", woodAlbedoRSV);
+	materials["wood"]->AddTextureSRV("RoughnessMap", woodSpecularRSV);
+	materials["wood"]->AddTextureSRV("NormalMap", woodNormalRSV);
+	materials["wood"]->AddTextureSRV("MetalnessMap", woodMetalnessRSV);
 
 	// Portal Material
-	materials.push_back(new Material(XMFLOAT4(1, 1, 1, 0), portalPixelShader, vertexShader, 0.0f));
-	materials[3]->AddSampler("BasicSampler", sampler);
+	materials.insert({"portal", new Material(XMFLOAT4(1, 1, 1, 0), portalPixelShader, vertexShader, 0.0f)});
+	materials["portal"]->AddSampler("BasicSampler", sampler);
 }
 
 // --------------------------------------------------------
-// Creates the geometry we're going to draw - a single triangle for now
+// Creates the geometry we're going to draw
 // --------------------------------------------------------
 void Game::CreateBasicGeometry()
 {
@@ -271,67 +289,104 @@ void Game::CreateBasicGeometry()
 	meshes.push_back(mesh2);
 	Mesh* portalMesh = new Mesh(GetFullPathTo("../../Assets/Models/quad.obj").c_str(), device, context);
 	meshes.push_back(portalMesh);
+	Mesh* newPortalMesh = MeshFactory::CreateCircleMesh(30, device, context);
+	meshes.push_back(newPortalMesh);
 
 	// Create scene mesh.
-	entities.push_back(new Entity(meshes[0], materials[0]));
-	entities[0]->GetTransform()->SetScale(20, .01f, 10);
-	entities[0]->GetTransform()->MoveAbsolute(0, 0, 5);
-	entities.push_back(new Entity(meshes[0], materials[0]));
-	entities[1]->GetTransform()->SetScale(20, 20, .01f);
-	entities[1]->GetTransform()->SetPosition(0, 10, 10);
-	entities[1]->GetTransform()->SetPitchYawRoll(0, 0, PI / 2);
-	entities.push_back(new Entity(meshes[0], materials[0]));
-	entities[2]->GetTransform()->SetScale(20, 20, .01f);
-	entities[2]->GetTransform()->SetPosition(0, 10, 0);
-	entities.push_back(new Entity(meshes[1], materials[2]));
-	entities[3]->GetTransform()->SetScale(1, 1, 1);
-	entities[3]->GetTransform()->MoveAbsolute(0, 2, 5);
-	//entities.push_back(new Entity(meshes[0], materials[0]));
-	//entities[4]->GetTransform()->SetScale(20, .01f, 10);
-	//entities[4]->GetTransform()->MoveAbsolute(0, 4, 5);
-	//entities[4]->GetTransform()->SetPitchYawRoll(PI, 0, 0);
+	entities.insert({ "floor", new Entity(meshes[0], materials["wood"])});
+	entities["floor"]->GetTransform()->SetScale(20, .01f, 20);
+	entities["floor"]->GetTransform()->MoveAbsolute(0, 0, 0);
+	entities.insert({ "pos_z_wall", new Entity(meshes[0], materials["cobblestone"])});
+	entities["pos_z_wall"]->GetTransform()->SetScale(20, 20, 0.001f);
+	entities["pos_z_wall"]->GetTransform()->SetPosition(0, 10, 10);
+	entities["pos_z_wall"]->GetTransform()->SetPitchYawRoll(0, 0, PI / 2);
+	entities.insert({ "neg_z_wall", new Entity(meshes[0], materials["cobblestone"])});
+	entities["neg_z_wall"]->GetTransform()->SetScale(20, 20, 0.001f);
+	entities["neg_z_wall"]->GetTransform()->SetPosition(0, 10, -10);
+	entities.insert({"pos_x_wall", new Entity(meshes[0], materials["cobblestone"])});
+	entities["pos_x_wall"]->GetTransform()->SetScale(0.001f, 20, 20);
+	entities["pos_x_wall"]->GetTransform()->SetPosition(10, 10, 0);
+	entities.insert({ "neg_x_wall", new Entity(meshes[0], materials["cobblestone"]) });
+	entities["neg_x_wall"]->GetTransform()->SetScale(0.001f, 20, 20);
+	entities["neg_x_wall"]->GetTransform()->SetPosition(-10, 10, 0);
+	entities.insert({ "sphere", new Entity(meshes[1], materials["metal"])});
+	entities["sphere"]->GetTransform()->SetScale(1, 1, 1);
+	entities["sphere"]->GetTransform()->MoveAbsolute(0, 2, 5);
+	//entities.insert({ "test", new Entity(meshes[3], materials[0]) });
+	//entities["test"]->GetTransform()->SetScale(1, 2, 0);
+	//entities["test"]->GetTransform()->MoveAbsolute(0, 2, 5);
+	
+	// First set of portals
+	portals[0] = new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(1, 0.6f, 0));
+	portals[0]->GetTransform()->MoveAbsolute(3.5f, 3, 10 - portalOffset);
+	portals[0]->GetTransform()->SetPitchYawRoll(0, PI, 0);
+	portals[0]->GetTransform()->SetScale(1, 2, 1);
+	portals[1] = new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(1, 0.6f, 0));
+	portals[1]->GetTransform()->MoveAbsolute(3.5f, 3, -10 + portalOffset);
+	portals[1]->GetTransform()->SetPitchYawRoll(0, 0, 0);
+	portals[1]->GetTransform()->SetScale(1, 2, 1);
+	portals[0]->SetDestination(portals[1]);
+	portals[1]->SetDestination(portals[0]);
+
+	// Second set of portals
+	portals[2] = new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(0, 0, 1));
+	portals[2]->GetTransform()->MoveAbsolute(10 - portalOffset, 3, 0);
+	portals[2]->GetTransform()->SetScale(1, 2, 1);
+	portals[2]->GetTransform()->SetPitchYawRoll(0, - PI / 2, 0);
+	portals[3] = new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(0, 0, 1));
+	portals[3]->GetTransform()->MoveAbsolute(-10 + portalOffset, 3, 0);
+	portals[3]->GetTransform()->SetScale(1, 2, 1);
+	portals[3]->GetTransform()->SetPitchYawRoll(0, PI / 2, 0);
+	portals[2]->SetDestination(portals[3]);
+	portals[3]->SetDestination(portals[2]);
+
+	// Third set of portals
+	portals[4] = new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255));
+	portals[4]->GetTransform()->MoveAbsolute(-3.5f, 3, 10 - portalOffset);
+	portals[4]->GetTransform()->SetPitchYawRoll(0, PI, 0);
+	portals[4]->GetTransform()->SetScale(1, 2, 1);
+	portals[5] = new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255));
+	portals[5]->GetTransform()->MoveAbsolute(-3.5f, 3, -10 + portalOffset);
+	portals[5]->GetTransform()->SetPitchYawRoll(0, 0, 0);
+	portals[5]->GetTransform()->SetScale(1, 2, 1);
+	portals[4]->SetDestination(portals[5]);
+	portals[5]->SetDestination(portals[4]);
+	//portals[1] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(0, 0, 1));
+	//portals[1]->GetTransform()->MoveAbsolute(10 - portalOffset, 2, 8);
+	//portals[1]->GetTransform()->SetPitchYawRoll(0, -PI/2, 0);
+	//portals[1]->GetTransform()->SetScale(1, 2, 1);
+	//portals[0]->SetDestination(portals[1]);
+	//portals[1]->SetDestination(portals[0]);
+
+	//// Second set of portals
+	//portals[2] = new Portal(meshes[2], materials[3], 0, XMFLOAT3(1, 0.6f, 0));
+	//portals[2]->GetTransform()->MoveAbsolute(-4, 2, 10 - portalOffset);
+	//portals[2]->GetTransform()->SetPitchYawRoll(0, PI, 0);
+	//portals[2]->GetTransform()->SetScale(1, 2, 1);
+	//portals[3] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(1, 0.6f, 0));
+	//portals[3]->GetTransform()->MoveAbsolute(-4, 2, 0 + portalOffset);
+	//portals[3]->GetTransform()->SetPitchYawRoll(0, 0, 0);
+	//portals[3]->GetTransform()->SetScale(1, 2, 1);
+	//portals[2]->SetDestination(portals[3]);
+	//portals[3]->SetDestination(portals[2]);
+
+	//// Third set of portals
+	//portals[4] = new Portal(meshes[2], materials[3], 0, XMFLOAT3(0, 1, 0));
+	//portals[4]->GetTransform()->MoveAbsolute(10 - portalOffset, 2, 3);
+	//portals[4]->GetTransform()->SetPitchYawRoll(0, -PI/2, 0);
+	//portals[4]->GetTransform()->SetScale(1, 2, 1);
+	//portals[5] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(0, 1, 0));
+	//portals[5]->GetTransform()->MoveAbsolute(-10 + portalOffset, 2, 3);
+	//portals[5]->GetTransform()->SetPitchYawRoll(0, PI/2, 0);
+	//portals[5]->GetTransform()->SetScale(1, 2, 1);
+	//portals[4]->SetDestination(portals[5]);
+	//portals[5]->SetDestination(portals[4]);
 
 	// For debugging the virtual cameras position.
 	//virtualCamera[0] = new Entity(meshes[0], materials[0]);
 	//virtualCamera[0]->GetTransform()->MoveAbsolute(0, 0, 0);
 	//virtualCamera[1] = new Entity(meshes[0], materials[0]);
 	//virtualCamera[1]->GetTransform()->MoveAbsolute(0, 0, 0);
-	
-	// First set of portals.
-	portals[0] = new Portal(meshes[2], materials[3], 0, XMFLOAT3(0, 0, 1));
-	portals[0]->GetTransform()->MoveAbsolute(0, 2, 10);
-	portals[0]->GetTransform()->SetPitchYawRoll(0, PI, 0);
-	portals[0]->GetTransform()->SetScale(1, 2, 1);
-	portals[1] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(0, 0, 1));
-	portals[1]->GetTransform()->MoveAbsolute(10, 2, 8);
-	portals[1]->GetTransform()->SetPitchYawRoll(0, -PI/2, 0);
-	portals[1]->GetTransform()->SetScale(1, 2, 1);
-	portals[0]->SetDestination(portals[1]);
-	portals[1]->SetDestination(portals[0]);
-
-	// Second set of portals
-	portals[2] = new Portal(meshes[2], materials[3], 0, XMFLOAT3(1, 0.6f, 0));
-	portals[2]->GetTransform()->MoveAbsolute(-4, 2, 10);
-	portals[2]->GetTransform()->SetPitchYawRoll(0, PI, 0);
-	portals[2]->GetTransform()->SetScale(1, 2, 1);
-	portals[3] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(1, 0.6f, 0));
-	portals[3]->GetTransform()->MoveAbsolute(-4, 2, 0);
-	portals[3]->GetTransform()->SetPitchYawRoll(0, 0, 0);
-	portals[3]->GetTransform()->SetScale(1, 2, 1);
-	portals[2]->SetDestination(portals[3]);
-	portals[3]->SetDestination(portals[2]);
-
-	// Third set of portals
-	portals[4] = new Portal(meshes[2], materials[3], 0, XMFLOAT3(0, 1, 0));
-	portals[4]->GetTransform()->MoveAbsolute(10, 2, 3);
-	portals[4]->GetTransform()->SetPitchYawRoll(0, -PI/2, 0);
-	portals[4]->GetTransform()->SetScale(1, 2, 1);
-	portals[5] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(0, 1, 0));
-	portals[5]->GetTransform()->MoveAbsolute(-10, 2, 3);
-	portals[5]->GetTransform()->SetPitchYawRoll(0, PI/2, 0);
-	portals[5]->GetTransform()->SetScale(1, 2, 1);
-	portals[4]->SetDestination(portals[5]);
-	portals[5]->SetDestination(portals[4]);
 
 	// Create basic lighting
 	Light dirLight1 = {};
@@ -428,8 +483,8 @@ void Game::Update(float deltaTime, float totalTime)
 
 void Game::UpdateTransforms(float deltaTime, float totalTime)
 {
-	XMFLOAT3 pos = entities[3]->GetTransform()->GetPosition();
-	entities[3]->GetTransform()->SetPosition(2 * sin(totalTime), pos.y, pos.z);
+	XMFLOAT3 pos = entities["sphere"]->GetTransform()->GetPosition();
+	entities["sphere"]->GetTransform()->SetPosition(2 * sin(totalTime), pos.y, pos.z);
 }
 
 // --------------------------------------------------------
@@ -475,9 +530,12 @@ void Game::Draw(float deltaTime, float totalTime)
 // Draw anything that is a non-portal.
 void Game::DrawNonPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPosition)
 {
-	for (int i = 0; i < entities.size(); i++) {
-		if (!drawWalls && (i == 1 || i == 2)) continue;
-		Entity* entity = entities[i];
+	for (auto& pair : entities) {
+		// Skip drawing walls
+		if (!drawWalls && pair.first.find("wall") != string::npos) {
+			continue;
+		}
+		Entity* entity = pair.second;
 		SimplePixelShader* ps = entity->GetMaterial()->GetPixelShader();
 		ps->SetData("lights", &lights[0], sizeof(Light) * (int)lights.size());
 		ps->SetFloat3("ambientColor", ambientColor);
@@ -486,7 +544,6 @@ void Game::DrawNonPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 camer
 }
 
 // Draw the portals by calculating the virtual cameras view and clipped projection matrix, and using the stencil buffer.
-// This method is currently not recursive, but was set up in such a way to support recursive portals down the line.
 void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPosition, int maxRecursion, int recursionLevel)
 {
 	//Portal* portal = portals[2];
@@ -497,15 +554,17 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 
 		// Calculate the view from the perspective of the out portal
 		XMMATRIX rotationMatrix = XMMatrixRotationAxis(XMVectorSet(0, 1, 0, 0), PI);
-		XMMATRIX V = XMMatrixInverse(0, XMLoadFloat4x4(&portal->GetDestination()->GetTransform()->GetWorldMatrix()))
+		XMFLOAT4X4 destinationWorldMatrix = portal->GetDestination()->GetTransform()->GetWorldMatrix();
+		XMFLOAT4X4 currentWorldMatrix = portal->GetTransform()->GetWorldMatrix();
+		XMMATRIX V = XMMatrixInverse(0, XMLoadFloat4x4(&destinationWorldMatrix))
 			* rotationMatrix
-			* XMLoadFloat4x4(&portal->GetTransform()->GetWorldMatrix())
+			* XMLoadFloat4x4(&currentWorldMatrix)
 			* XMLoadFloat4x4(&viewMat);
 		XMFLOAT4X4 viewDest;
 		XMStoreFloat4x4(&viewDest, V);
 
-		// Calculate Oblique Clipped Projection Matrix. Use standard projection matrix for now.
-		XMFLOAT4X4 newProj = projMat; //portal->GetDestination()->ClippedProjectionMatrix(viewDest, projMat);
+		// Calculate Oblique Clipped Projection Matrix.
+		XMFLOAT4X4 newProj = portal->GetDestination()->ClippedProjectionMatrix(viewDest, projMat);
 
 		// Calculate new camera position
 		XMFLOAT3 relPos = portal->GetTransform()->InverseTransformPoint(camera->GetTransform()->GetPosition());
@@ -548,7 +607,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 			1.0f,
 			0);
 		// Draw portal into stencil buffer. This will undo the stencil bits we incremented, 
-		// eventually returning to a buffer full of zeroes.a
+		// eventually returning to a buffer full of zeroes.
 		portal->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
 	}
 	
@@ -593,7 +652,8 @@ void Game::CheckPortalCollision()
 		// Calculate which side of the plane the camera is on.
 		XMFLOAT3 portalPos = portal->GetTransform()->GetPosition();
 		XMFLOAT3 diff = XMFLOAT3(cameraPos.x - portalPos.x, cameraPos.y - portalPos.y, cameraPos.z - portalPos.z);
-		float dot = XMVector3Dot(XMLoadFloat3(&diff), XMLoadFloat3(&portal->GetTransform()->GetForward())).m128_f32[0];
+		XMFLOAT3 forward = portal->GetTransform()->GetForward();
+		float dot = XMVector3Dot(XMLoadFloat3(&diff), XMLoadFloat3(&forward)).m128_f32[0];
 		// Calculate if the camera falls within the dimensions of the portal.
 		XMFLOAT3 right = portal->GetTransform()->GetRight();
 		XMFLOAT3 up = portal->GetTransform()->GetUp();
@@ -612,11 +672,14 @@ void Game::CheckPortalCollision()
 			float rotDiff = cameraRot.y + PI - portalRot.y;
 			XMVECTOR xmDiff = XMLoadFloat3(&diff);
 			XMFLOAT3 localDiff;
+			XMFLOAT3 destinationRight = portal->GetDestination()->GetTransform()->GetRight();
+			XMFLOAT3 destinationUp = portal->GetDestination()->GetTransform()->GetUp();
+			XMFLOAT3 destinationForward = portal->GetDestination()->GetTransform()->GetForward();
 			XMStoreFloat3(&localDiff,
 				XMVectorSet(
-					XMVector3Dot(xmDiff, XMLoadFloat3(&portal->GetDestination()->GetTransform()->GetRight())).m128_f32[0],
-					XMVector3Dot(xmDiff, XMLoadFloat3(&portal->GetDestination()->GetTransform()->GetUp())).m128_f32[0],
-					XMVector3Dot(xmDiff, XMLoadFloat3(&portal->GetDestination()->GetTransform()->GetForward())).m128_f32[0],
+					XMVector3Dot(xmDiff, XMLoadFloat3(&destinationRight)).m128_f32[0],
+					XMVector3Dot(xmDiff, XMLoadFloat3(&destinationUp)).m128_f32[0],
+					XMVector3Dot(xmDiff, XMLoadFloat3(&destinationForward)).m128_f32[0],
 					0
 				)
 			);

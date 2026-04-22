@@ -11,6 +11,8 @@
 #include "Sky.h"
 #include "Portal.h"
 
+using namespace std;
+
 class Game 
 	: public DXCore
 {
@@ -65,11 +67,11 @@ private:
 	SimpleVertexShader* skyVS;
 
 	DirectX::XMFLOAT3 ambientColor = DirectX::XMFLOAT3(.1, .1, .1);
-	std::vector<Mesh*> meshes;
-	std::vector<Entity*> entities;
+	vector<Mesh*> meshes;
+	unordered_map<string, Entity*> entities;
 	Portal* portals[6];
-	std::vector<Material*> materials;
-	std::vector<Light> lights;
+	unordered_map<string, Material*> materials;
+	vector<Light> lights;
 	Camera* camera;
 	Sky* skyBox;
 	bool drawSkyBox;
@@ -77,6 +79,7 @@ private:
 	float portalCoolDown;
 	bool drawWalls;
 	bool portalAnimation;
+	float portalOffset = 0.4f;
 
 	Entity* virtualCamera[2];
 };
