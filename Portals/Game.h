@@ -77,9 +77,9 @@ private:
 	bool drawSkyBox;
 	bool debugPortals;
 	float portalCoolDown;
-	bool drawWalls;
+	bool drawWalls = true;
 	bool portalAnimation;
-	float portalOffset = 0.4f;
+	float portalOffset = 0.01f;
 
 	Entity* virtualCamera[2];
 };

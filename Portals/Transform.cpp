@@ -6,6 +6,10 @@ Transform::Transform()
     position = XMFLOAT3(0, 0, 0);
     pitchYawRoll = XMFLOAT3(0, 0, 0);
     scale = XMFLOAT3(1, 1, 1);
+    forwardVector = XMFLOAT3(0, 0, 1);
+    upVector = XMFLOAT3(0, 1, 0);
+    rightVector = XMFLOAT3(1, 0, 0);
+    rotated = false; // Start false, but we have valid vectors now
 
     XMMATRIX ident = XMMatrixIdentity();
     XMStoreFloat4x4(&worldMatrix, ident);

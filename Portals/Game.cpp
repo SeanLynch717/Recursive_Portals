@@ -83,6 +83,7 @@ void Game::Init()
 	LoadShaders();
 	CreateMaterials();
 	CreateBasicGeometry();
+	ShowCursor(FALSE);
 	// Create the skybox
 	//skyBox = new Sky(GetFullPathTo_Wide(L"../../Assets/Textures/Skies/SunnyCubeMap.dds").c_str(), skyVS, skyPS, meshes[0], sampler, device, context);
 
@@ -92,7 +93,7 @@ void Game::Init()
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Create the camera once we have the aspect ratio
-	camera = new Camera(0, 2, 0, 5.0f, .5f, XM_PIDIV4, (float)width / height);
+	camera = new Camera(0, 2, 0, 5.0f, .15f, XM_PIDIV4, (float)width / height, hWnd);
 	camera->GetTransform()->SetPitchYawRoll(0, PI / 2, 0);
 	drawSkyBox = true;
 	debugPortals = true;
@@ -312,9 +313,6 @@ void Game::CreateBasicGeometry()
 	entities.insert({ "sphere", new Entity(meshes[1], materials["metal"])});
 	entities["sphere"]->GetTransform()->SetScale(1, 1, 1);
 	entities["sphere"]->GetTransform()->MoveAbsolute(0, 2, 5);
-	//entities.insert({ "test", new Entity(meshes[3], materials[0]) });
-	//entities["test"]->GetTransform()->SetScale(1, 2, 0);
-	//entities["test"]->GetTransform()->MoveAbsolute(0, 2, 5);
 	
 	// First set of portals
 	portals[0] = new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(1, 0.6f, 0));
@@ -452,6 +450,7 @@ void Game::OnResize()
 // --------------------------------------------------------
 void Game::Update(float deltaTime, float totalTime)
 {
+	cout << sizeof(Camera) << endl;
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::GetInstance().KeyDown(VK_ESCAPE))
 		Quit();

@@ -1,14 +1,17 @@
 #include "Camera.h"
 #include "Input.h"
 #include <string>
+#include <iostream>
 #define PI 3.14159265
 using namespace DirectX;
+using namespace std;
 
-Camera::Camera(float x, float y, float z, float moveSpeed, float lookSpeed, float fov, float ar) :
+Camera::Camera(float x, float y, float z, float moveSpeed, float lookSpeed, float fov, float ar, HWND hWnd) :
 	movementSpeed(moveSpeed),
 	mouseLookSpeed(lookSpeed),
 	fieldOfView(fov),
-	aspectRatio(ar)
+	aspectRatio(ar),
+	hWnd(hWnd)
 {
 	// setup transform
 	transform.SetPosition(x, y, z);
@@ -40,21 +43,38 @@ void Camera::Update(float dt)
 	if (input.KeyDown(VK_SPACE)) { transform.MoveAbsolute(0, speed, 0); }
 
 	// Control rotation of the camera
-	if (input.MouseLeftDown())
+	// Get the center of the window
+	RECT rect;
+	GetClientRect(hWnd, &rect);
+	POINT center = { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 };
+
+	// Get current mouse position (relative to window)
+	POINT current;
+	GetCursorPos(&current);
+	ScreenToClient(hWnd, &current);
+
+	// Calculate how far it moved from center
+	float dx = dt * mouseLookSpeed * ((float)current.x - center.x);
+	float dy = dt * mouseLookSpeed * ((float)current.y - center.y);
+
+	if (dx != 0 || dy != 0)
 	{
-		// Calculate how much the cursor changed
-		float xDiff = dt * mouseLookSpeed * input.GetMouseXDelta();
-		float yDiff = dt * mouseLookSpeed * input.GetMouseYDelta();
+		if (initialized == true) {
+			// Rotate the transform!SWAP X AND Y!
+			this->transform.Rotate(dy, dx, 0);
 
-		// Roate the transform! SWAP X AND Y!
-		transform.Rotate(yDiff, xDiff, 0);
-
-		DirectX::XMFLOAT3 rotation = transform.GetPitchYawRoll();
-		float epsilon = .01f;
-		if (rotation.x > PI / 2 - epsilon) transform.SetPitchYawRoll(PI / 2 - epsilon, rotation.y, rotation.z);
-		if (rotation.x < -PI / 2 + epsilon) transform.SetPitchYawRoll(-PI / 2 + epsilon, rotation.y, rotation.z);
+			DirectX::XMFLOAT3 rotation = transform.GetPitchYawRoll();
+			float epsilon = .01f;
+			if (rotation.x > PI / 2 - epsilon) transform.SetPitchYawRoll(PI / 2 - epsilon, rotation.y, rotation.z);
+			if (rotation.x < -PI / 2 + epsilon) transform.SetPitchYawRoll(-PI / 2 + epsilon, rotation.y, rotation.z);
+		}
+		initialized = true;
+		// Force the cursor back to the center
+		POINT screenCenter = center;
+		ClientToScreen(hWnd, &screenCenter);
+		SetCursorPos(screenCenter.x, screenCenter.y);
 	}
-	
+
 	// At the end, update the view
 	UpdateViewMatrix();
 }

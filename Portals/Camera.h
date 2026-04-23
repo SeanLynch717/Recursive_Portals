@@ -1,11 +1,12 @@
 #pragma once
+#include <Windows.h>
 #include <DirectXMath.h>
 #include "Transform.h"
 
 class Camera
 {
 public:
-	Camera(float x, float y, float z, float moveSpeed, float lookSpeed, float fov, float ar);
+	Camera(float x, float y, float z, float moveSpeed, float lookSpeed, float fov, float ar, HWND hWnd);
 	~Camera();
 
 	// Update methods
@@ -25,8 +26,10 @@ private:
 	DirectX::XMFLOAT4X4 projectionMatrix;
 
 	Transform transform;
+	HWND hWnd;
 	float movementSpeed;
 	float mouseLookSpeed;
 	float fieldOfView;
 	float aspectRatio;
+	bool initialized = false;
 };
