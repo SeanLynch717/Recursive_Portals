@@ -31,6 +31,15 @@ public:
 	void DrawNonPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPosition);
 	void DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPosition, int maxRecursion, int recursionLevel);
 	void CheckPortalCollision();
+	void TryPlacePortal(int id);
+	bool RayTriangleIntersect(
+		DirectX::XMVECTOR rayOrigin,    // Point 1 of line
+		DirectX::XMVECTOR rayDir,       // Direction (Point 2 - Point 1)
+		DirectX::XMVECTOR V0,           // Triangle Vertex 0
+		DirectX::XMVECTOR V1,           // Triangle Vertex 1
+		DirectX::XMVECTOR V2,           // Triangle Vertex 2
+		DirectX::XMFLOAT3& outPoint		// The intersection point in 3D space
+	);
 
 
 private:
@@ -69,7 +78,7 @@ private:
 	DirectX::XMFLOAT3 ambientColor = DirectX::XMFLOAT3(.1, .1, .1);
 	vector<Mesh*> meshes;
 	unordered_map<string, Entity*> entities;
-	Portal* portals[6];
+	unordered_map<string, Portal*> portals;
 	unordered_map<string, Material*> materials;
 	vector<Light> lights;
 	Camera* camera;
@@ -77,9 +86,16 @@ private:
 	bool drawSkyBox;
 	bool debugPortals;
 	float portalCoolDown;
+	float portalPlacementCoolDown;
 	bool drawWalls = true;
 	bool portalAnimation;
-	float portalOffset = 0.01f;
+	float portalOffset = 0.5f;
+	float maxPortalPlacementDistance = 50.0f;
+
+	// Portal tweens
+	float leftPortalTween = 1.0f;
+	float rightPortalTween = 1.0f;
+	float portalTweenSpeed = 5.0f;
 
 	Entity* virtualCamera[2];
 };

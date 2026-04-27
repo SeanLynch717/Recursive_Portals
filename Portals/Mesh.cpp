@@ -1,5 +1,6 @@
 #include "Mesh.h"
 using namespace DirectX;
+using namespace std;
 
 Mesh::Mesh(Vertex vertices[], int number_of_vertices, unsigned int indicies[], int number_of_indicies,
 	Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
@@ -7,12 +8,16 @@ Mesh::Mesh(Vertex vertices[], int number_of_vertices, unsigned int indicies[], i
 	this->context = context;
 	CalculateTangents(vertices, number_of_vertices, indicies, number_of_indicies);
 	CreateBuffers(vertices, number_of_vertices, indicies, number_of_indicies, device);
+	for (int i = 0; i < number_of_vertices; i++) {
+		TrySetLocalMinMax(vertices[i].Position);
+	}
+	this->vertices.assign(vertices, vertices + number_of_vertices);
+	this->indices.assign(indicies, indicies + number_of_indicies);
 }
 
 Mesh::Mesh(const char* filepath, Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
 {
 	this->context = context;
-
 	// --------------------------------------------------------
 	// Author: Chris Cascioli
 	// --------------------------------------------------------
@@ -75,6 +80,7 @@ Mesh::Mesh(const char* filepath, Microsoft::WRL::ComPtr<ID3D11Device> device, Mi
 
 			// Add to the positions
 			positions.push_back(pos);
+			TrySetLocalMinMax(pos);
 		}
 		else if (chars[0] == 'f')
 		{
@@ -223,11 +229,13 @@ Mesh::Mesh(const char* filepath, Microsoft::WRL::ComPtr<ID3D11Device> device, Mi
 	//    and detect duplicate vertices, but at that point it would be better to use a more
 	//    sophisticated model loading library like TinyOBJLoader or AssImp (yes, that's its name)
 	CreateBuffers(&verts[0], vertCounter, &indices[0], indexCounter, device);
+
+	this->vertices = verts;
+	this->indices = indices;
 }
 
 Mesh::~Mesh() 
 {
-
 }
 
 // --------------------------------------------------------
@@ -363,19 +371,46 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer()
 	return index_buffer;
 }
 
+void Mesh::TrySetLocalMinMax(XMFLOAT3 pos)
+{
+	if (pos.x < localMin.x) localMin.x = pos.x;
+	if (pos.y < localMin.y) localMin.y = pos.y;
+	if (pos.z < localMin.z) localMin.z = pos.z;
+	if (pos.x > localMax.x) localMax.x = pos.x;
+	if (pos.y > localMax.y) localMax.y = pos.y;
+	if (pos.z > localMax.z) localMax.z = pos.z;
+}
+
 int Mesh::GetIndexCount()
 {
 	return index_count;
 }
 
+XMFLOAT3 Mesh::GetLocalMin()
+{
+	return localMin;
+}
+
+XMFLOAT3 Mesh::GetLocalMax()
+{
+	return localMax;
+}
+
+vector<Vertex>& Mesh::GetVertices()
+{
+	return vertices;
+}
+
+vector<UINT>& Mesh::GetIndices()
+{
+	return indices;
+}
+
 void Mesh::Draw()
 {
 	// Set buffers in the input assembler
-//  - Do this ONCE PER OBJECT you're drawing, since each object might
-//    have different geometry.
-//  - for this demo, this step *could* simply be done once during Init(),
-//    but I'm doing it here because it's often done multiple times per frame
-//    in a larger application/game
+	//  - Do this ONCE PER OBJECT you're drawing, since each object might
+	//    have different geometry.
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
 	context->IASetVertexBuffers(0, 1, vertex_buffer.GetAddressOf(), &stride, &offset);

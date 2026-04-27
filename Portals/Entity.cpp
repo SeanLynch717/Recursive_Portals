@@ -4,6 +4,7 @@ Entity::Entity(Mesh* mesh, Material* material) {
 	meshPtr = mesh;
 	materialPtr = material;
 	transform = Transform();
+	// Calculate AABB in world space
 }
 Entity::~Entity() {
 
@@ -18,6 +19,23 @@ Transform* Entity::GetTransform() {
 Material* Entity::GetMaterial()
 {
 	return materialPtr;
+}
+
+BoundingBox Entity::GetBoundingBox() {
+	if (transform.boundsDirty) {
+		XMFLOAT3 localMin = meshPtr->GetLocalMin();
+		XMFLOAT3 localMax = meshPtr->GetLocalMax();
+		XMFLOAT3 worldCorner1 = transform.TransformPoint(XMFLOAT3(localMin.x, localMin.y, localMin.z));
+		XMFLOAT3 worldCorner2 = transform.TransformPoint(XMFLOAT3(localMax.x, localMax.y, localMax.z));
+		XMFLOAT3 extents = XMFLOAT3(
+			abs(worldCorner2.x - worldCorner1.x) / 2,
+			abs(worldCorner2.y - worldCorner1.y) / 2,
+			abs(worldCorner2.z - worldCorner1.z) / 2
+		);
+		boundingBox = BoundingBox(transform.GetPosition(), extents);
+		transform.boundsDirty = false;
+	}
+	return boundingBox;
 }
 
 void Entity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPosition)

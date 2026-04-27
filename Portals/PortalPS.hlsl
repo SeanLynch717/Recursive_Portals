@@ -26,7 +26,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float squareRoot = sqrt(pow(input.uv.x - 0.5f, 2) + pow(input.uv.y - 0.5f, 2));
 	float lowerBound = abs(cos(totalTime * 2) / 2.3);
 	// Draw border
-	if (squareRoot > 0.45f) {
+	if (squareRoot > 0.45) {
 		return float4(borderColor, 1);
 	}
 	return float4(0, 0, 0, drawRecursive ? 0 : 1);

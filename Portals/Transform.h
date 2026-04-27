@@ -34,6 +34,8 @@ public:
 
     DirectX::XMFLOAT3 TransformPoint(DirectX::XMFLOAT3 point);
     DirectX::XMFLOAT3 InverseTransformPoint(DirectX::XMFLOAT3 point);
+    // Used to track if the Transform has changed and the Entity needs to update its bounding box.
+    bool boundsDirty = false;
 
 private:
     // Raw transformation data

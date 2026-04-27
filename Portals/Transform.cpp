@@ -102,6 +102,7 @@ void Transform::SetPosition(float x, float y, float z)
     position = XMFLOAT3(x, y, z);
 
     matricesDirty = true;
+    boundsDirty = true;
 }
 
 void Transform::SetPitchYawRoll(float pitch, float yaw, float roll)
@@ -109,6 +110,7 @@ void Transform::SetPitchYawRoll(float pitch, float yaw, float roll)
     pitchYawRoll = XMFLOAT3(pitch, yaw, roll);
 
     matricesDirty = true;
+    boundsDirty = true;
     rotated = true;
 }
 
@@ -117,6 +119,7 @@ void Transform::SetScale(float x, float y, float z)
     scale = XMFLOAT3(x, y, z);
 
     matricesDirty = true;
+    boundsDirty = true;
 }
 
 void Transform::MoveAbsolute(float x, float y, float z)
@@ -126,6 +129,7 @@ void Transform::MoveAbsolute(float x, float y, float z)
     position.z += z;
 
     matricesDirty = true;
+    boundsDirty = true;
 }
 
 void Transform::MoveRelative(float x, float y, float z)
@@ -146,6 +150,7 @@ void Transform::Rotate(float pitch, float yaw, float roll)
     pitchYawRoll.z += roll;
 
     matricesDirty = true;
+    boundsDirty = true;
     rotated = true;
 }
 
@@ -156,6 +161,7 @@ void Transform::Scale(float x, float y, float z)
     scale.z *= z;
 
     matricesDirty = true;
+    boundsDirty = true;
 }
 
 void Transform::SetRight(XMFLOAT3 right)

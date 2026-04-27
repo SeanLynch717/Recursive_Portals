@@ -3,6 +3,7 @@
 #include "Mesh.h"
 #include "Camera.h"
 #include "Material.h"
+#include <DirectXCollision.h>
 
 class Entity {
 public:
@@ -13,8 +14,10 @@ public:
 	Transform* GetTransform();
 	Material* GetMaterial();
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPosition);
+	DirectX::BoundingBox GetBoundingBox();
 private:
 	Transform transform;
 	Mesh* meshPtr;
 	Material* materialPtr;
+	BoundingBox boundingBox;
 };

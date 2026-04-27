@@ -59,7 +59,9 @@ Game::~Game()
 	for (const auto& pair : materials) {
 		delete pair.second;
 	}
-
+	for (const auto& pair : portals) {
+		delete pair.second;
+	}
 	delete camera;
 	delete vertexShader;
 	delete portalPixelShader;
@@ -67,8 +69,6 @@ Game::~Game()
 	delete skyVS;
 	delete skyPS;
 	delete skyBox;
-	delete portals[0];
-	delete portals[1];
 }
 
 // --------------------------------------------------------
@@ -299,10 +299,11 @@ void Game::CreateBasicGeometry()
 	entities["floor"]->GetTransform()->MoveAbsolute(0, 0, 0);
 	entities.insert({ "pos_z_wall", new Entity(meshes[0], materials["cobblestone"])});
 	entities["pos_z_wall"]->GetTransform()->SetScale(20, 20, 0.001f);
-	entities["pos_z_wall"]->GetTransform()->SetPosition(0, 10, 10);
 	entities["pos_z_wall"]->GetTransform()->SetPitchYawRoll(0, 0, PI / 2);
+	entities["pos_z_wall"]->GetTransform()->SetPosition(0, 10, 10);
 	entities.insert({ "neg_z_wall", new Entity(meshes[0], materials["cobblestone"])});
 	entities["neg_z_wall"]->GetTransform()->SetScale(20, 20, 0.001f);
+	entities["neg_z_wall"]->GetTransform()->SetPitchYawRoll(0, 0, PI / 2);
 	entities["neg_z_wall"]->GetTransform()->SetPosition(0, 10, -10);
 	entities.insert({"pos_x_wall", new Entity(meshes[0], materials["cobblestone"])});
 	entities["pos_x_wall"]->GetTransform()->SetScale(0.001f, 20, 20);
@@ -315,40 +316,40 @@ void Game::CreateBasicGeometry()
 	entities["sphere"]->GetTransform()->MoveAbsolute(0, 2, 5);
 	
 	// First set of portals
-	portals[0] = new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(1, 0.6f, 0));
-	portals[0]->GetTransform()->MoveAbsolute(3.5f, 3, 10 - portalOffset);
-	portals[0]->GetTransform()->SetPitchYawRoll(0, PI, 0);
-	portals[0]->GetTransform()->SetScale(1, 2, 1);
-	portals[1] = new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(1, 0.6f, 0));
-	portals[1]->GetTransform()->MoveAbsolute(3.5f, 3, -10 + portalOffset);
-	portals[1]->GetTransform()->SetPitchYawRoll(0, 0, 0);
-	portals[1]->GetTransform()->SetScale(1, 2, 1);
-	portals[0]->SetDestination(portals[1]);
-	portals[1]->SetDestination(portals[0]);
+	/*portals.insert({ "portal_set_1_a", new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(1, 0.6f, 0)) });
+	portals["portal_set_1_a"]->GetTransform()->MoveAbsolute(3.5f, 3, 10 - portalOffset);
+	portals["portal_set_1_a"]->GetTransform()->SetPitchYawRoll(0, PI, 0);
+	portals["portal_set_1_a"]->GetTransform()->SetScale(1, 2, 1);
+	portals.insert({ "portal_set_1_b", new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(1, 0.6f, 0)) });
+	portals["portal_set_1_b"]->GetTransform()->MoveAbsolute(3.5f, 3, -10 + portalOffset);
+	portals["portal_set_1_b"]->GetTransform()->SetPitchYawRoll(0, 0, 0);
+	portals["portal_set_1_b"]->GetTransform()->SetScale(1, 2, 1);
+	portals["portal_set_1_a"]->SetDestination(portals["portal_set_1_b"]);
+	portals["portal_set_1_b"]->SetDestination(portals["portal_set_1_a"]);*/
 
 	// Second set of portals
-	portals[2] = new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(0, 0, 1));
-	portals[2]->GetTransform()->MoveAbsolute(10 - portalOffset, 3, 0);
-	portals[2]->GetTransform()->SetScale(1, 2, 1);
-	portals[2]->GetTransform()->SetPitchYawRoll(0, - PI / 2, 0);
-	portals[3] = new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(0, 0, 1));
-	portals[3]->GetTransform()->MoveAbsolute(-10 + portalOffset, 3, 0);
-	portals[3]->GetTransform()->SetScale(1, 2, 1);
-	portals[3]->GetTransform()->SetPitchYawRoll(0, PI / 2, 0);
-	portals[2]->SetDestination(portals[3]);
-	portals[3]->SetDestination(portals[2]);
+	//portals.insert({ "portal_set_2_a", new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(0, 0, 1)) });
+	//portals["portal_set_2_a"]->GetTransform()->MoveAbsolute(10 - portalOffset, 3, 0);
+	//portals["portal_set_2_a"]->GetTransform()->SetPitchYawRoll(0, - PI / 2, 0);
+	//portals["portal_set_2_a"]->GetTransform()->SetScale(1, 2, 1);
+	//portals.insert({ "portal_set_2_b", new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(0, 0, 1)) });
+	//portals["portal_set_2_b"]->GetTransform()->MoveAbsolute(-10 + portalOffset, 3, 0);
+	//portals["portal_set_2_b"]->GetTransform()->SetScale(1, 2, 1);
+	//portals["portal_set_2_b"]->GetTransform()->SetPitchYawRoll(0, PI / 2, 0);
+	//portals["portal_set_2_a"]->SetDestination(portals["portal_set_2_b"]);
+	//portals["portal_set_2_b"]->SetDestination(portals["portal_set_2_a"]);
 
 	// Third set of portals
-	portals[4] = new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255));
-	portals[4]->GetTransform()->MoveAbsolute(-3.5f, 3, 10 - portalOffset);
-	portals[4]->GetTransform()->SetPitchYawRoll(0, PI, 0);
-	portals[4]->GetTransform()->SetScale(1, 2, 1);
-	portals[5] = new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255));
-	portals[5]->GetTransform()->MoveAbsolute(-3.5f, 3, -10 + portalOffset);
-	portals[5]->GetTransform()->SetPitchYawRoll(0, 0, 0);
-	portals[5]->GetTransform()->SetScale(1, 2, 1);
-	portals[4]->SetDestination(portals[5]);
-	portals[5]->SetDestination(portals[4]);
+	portals.insert({ "portal_set_3_a", new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255)) });
+	portals["portal_set_3_a"]->GetTransform()->MoveAbsolute(-3.5f, 3, 10 - portalOffset);
+	portals["portal_set_3_a"]->GetTransform()->SetPitchYawRoll(0, PI, 0);
+	portals["portal_set_3_a"]->GetTransform()->SetScale(1, 2, 1);
+	portals.insert({ "portal_set_3_b", new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255)) });
+	portals["portal_set_3_b"]->GetTransform()->MoveAbsolute(-3.5f, 3, -10 + portalOffset);
+	portals["portal_set_3_b"]->GetTransform()->SetPitchYawRoll(0, 0, 0);
+	portals["portal_set_3_b"]->GetTransform()->SetScale(1, 2, 1);
+	portals["portal_set_3_a"]->SetDestination(portals["portal_set_3_b"]);
+	portals["portal_set_3_b"]->SetDestination(portals["portal_set_3_a"]);
 	//portals[1] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(0, 0, 1));
 	//portals[1]->GetTransform()->MoveAbsolute(10 - portalOffset, 2, 8);
 	//portals[1]->GetTransform()->SetPitchYawRoll(0, -PI/2, 0);
@@ -450,7 +451,6 @@ void Game::OnResize()
 // --------------------------------------------------------
 void Game::Update(float deltaTime, float totalTime)
 {
-	cout << sizeof(Camera) << endl;
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::GetInstance().KeyDown(VK_ESCAPE))
 		Quit();
@@ -472,11 +472,38 @@ void Game::Update(float deltaTime, float totalTime)
 	if (Input::GetInstance().KeyPress('M')) {
 		portalAnimation = !portalAnimation;
 	}
+	if (portalPlacementCoolDown > 0.5f) {
+		if (Input::GetInstance().MouseLeftDown()) {
+			TryPlacePortal(0);
+		}
+		if (Input::GetInstance().MouseRightDown()) {
+			TryPlacePortal(1);
+		}
+	}
 	//if (Input::GetInstance().KeyPress('B')) {
 	//	drawSkyBox = !drawSkyBox;
 	//}
+	
+	// Portal tween
+	if (leftPortalTween != 1.0f) {
+		leftPortalTween += portalTweenSpeed * deltaTime;
+		if (leftPortalTween > 1.0f) {
+			leftPortalTween = 1.0f;
+		}
+		portals["portal_0"]->GetTransform()->SetScale(1.0f * sin(leftPortalTween * PI / 2), 2.0f * sin(leftPortalTween * PI / 2), 1.0f);
+	}
+	if (rightPortalTween != 1.0f) {
+		rightPortalTween += portalTweenSpeed * deltaTime;
+		if (rightPortalTween > 1.0f) {
+			rightPortalTween = 1.0f;
+		}
+		portals["portal_1"]->GetTransform()->SetScale(1.0f * sin(rightPortalTween * PI / 2), 2.0f * sin(rightPortalTween * PI / 2), 1.0f);
+	}
+
+
 	CheckPortalCollision();
 	portalCoolDown += deltaTime;
+	portalPlacementCoolDown += deltaTime;
 	camera->Update(deltaTime);
 }
 
@@ -504,7 +531,8 @@ void Game::Draw(float deltaTime, float totalTime)
 		1.0f,
 		0);
 
-	for (Portal* p : portals) {
+	for (const auto& pair : portals) {
+		Portal* p = pair.second;
 		SimplePixelShader* ps = p->GetMaterial()->GetPixelShader();
 		if (portalAnimation) {
 			ps->SetFloat("totalTime", totalTime);
@@ -545,10 +573,17 @@ void Game::DrawNonPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 camer
 // Draw the portals by calculating the virtual cameras view and clipped projection matrix, and using the stencil buffer.
 void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPosition, int maxRecursion, int recursionLevel)
 {
-	//Portal* portal = portals[2];
-	for (auto& portal : portals) {
+	for (const auto& pair : portals) {
+		Portal* portal = pair.second;
+
+		// No destination portal set, exit early!
+		if (portal->GetDestination() == nullptr) {
+			continue;
+		}
+
 		// Set Depth Stencil State
 		context->OMSetDepthStencilState(stencilWriteMask.Get(), recursionLevel);	
+
 		portal->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
 
 		// Calculate the view from the perspective of the out portal
@@ -621,15 +656,16 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 	context->OMSetDepthStencilState(portalDepthWrite.Get(), 0);
 
 	// Draw each portal (a plane) into the depth buffer
-	for (auto& portal : portals) {
-		portal->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
+	for (auto& pair : portals) {
+		pair.second->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
 	}
 	
 	// Set depth stencil state
 	context->OMSetDepthStencilState(portalBorderMask.Get(), recursionLevel);
 
 	// Draw portal outline
-	for (auto& portal : portals) {
+	for (auto& pair : portals) {
+		Portal* portal = pair.second;
 		portal->GetMaterial()->GetPixelShader()->SetInt("drawRecursive", 1);
 		portal->GetMaterial()->GetPixelShader()->SetFloat3("borderColor", portal->GetBorderColor());
 		portal->Draw(context, viewMat, projMat, cameraPosition);
@@ -647,13 +683,19 @@ void Game::CheckPortalCollision()
 	if (portalCoolDown < 1.0f) return;
 	XMFLOAT3 cameraPos = camera->GetTransform()->GetPosition();
 
-	for (auto& portal : portals) {
-		// Calculate which side of the plane the camera is on.
+	for (auto& pair : portals) {
+		Portal* portal = pair.second;
+		// No destination portal set, exit early!
+		if (portal->GetDestination() == nullptr) {
+			continue;
+		}
+		// Calculate dot product of the cameras position relative to the portal, and the portal's forward vector.
 		XMFLOAT3 portalPos = portal->GetTransform()->GetPosition();
 		XMFLOAT3 diff = XMFLOAT3(cameraPos.x - portalPos.x, cameraPos.y - portalPos.y, cameraPos.z - portalPos.z);
 		XMFLOAT3 forward = portal->GetTransform()->GetForward();
 		float dot = XMVector3Dot(XMLoadFloat3(&diff), XMLoadFloat3(&forward)).m128_f32[0];
-		// Calculate if the camera falls within the dimensions of the portal.
+
+		// Project the cameras position onto the portal plane's axes, and calculate the magnitude of that projection.
 		XMFLOAT3 right = portal->GetTransform()->GetRight();
 		XMFLOAT3 up = portal->GetTransform()->GetUp();
 		float rightDot = (right.x * diff.x) + (right.y * diff.y) + (right.z * diff.z);
@@ -663,28 +705,183 @@ void Game::CheckPortalCollision()
 
 		// Check if the camera is on the negative side of the plane, AND the magnitude of the cameras projection 
 		// onto the portal plane is within bounds of the portals frame.
-		if (dot <= 0.5f && dist <= 1) {
+		if (dot > -0.1f && dot <= 0.5f && dist <= 1) {
 			XMFLOAT3 destPos = portal->GetDestination()->GetTransform()->GetPosition();
 			XMFLOAT3 portalRot = portal->GetTransform()->GetPitchYawRoll();
 			XMFLOAT3 destRot = portal->GetDestination()->GetTransform()->GetPitchYawRoll();
 			XMFLOAT3 cameraRot = camera->GetTransform()->GetPitchYawRoll();
 			float rotDiff = cameraRot.y + PI - portalRot.y;
 			XMVECTOR xmDiff = XMLoadFloat3(&diff);
-			XMFLOAT3 localDiff;
-			XMFLOAT3 destinationRight = portal->GetDestination()->GetTransform()->GetRight();
-			XMFLOAT3 destinationUp = portal->GetDestination()->GetTransform()->GetUp();
-			XMFLOAT3 destinationForward = portal->GetDestination()->GetTransform()->GetForward();
-			XMStoreFloat3(&localDiff,
-				XMVectorSet(
-					XMVector3Dot(xmDiff, XMLoadFloat3(&destinationRight)).m128_f32[0],
-					XMVector3Dot(xmDiff, XMLoadFloat3(&destinationUp)).m128_f32[0],
-					XMVector3Dot(xmDiff, XMLoadFloat3(&destinationForward)).m128_f32[0],
-					0
-				)
-			);
-			camera->GetTransform()->SetPosition(destPos.x - localDiff.x, destPos.y + localDiff.y, destPos.z - localDiff.z);
+
+			// Calculate local offsets relative to the ENTRANCE portal's axes
+			float xOffset = XMVector3Dot(xmDiff, XMLoadFloat3(&right)).m128_f32[0];
+			float yOffset = XMVector3Dot(xmDiff, XMLoadFloat3(&up)).m128_f32[0];
+			float zOffset = XMVector3Dot(xmDiff, XMLoadFloat3(&forward)).m128_f32[0];
+
+			// Reconstruct position relative to the DESTINATION portal's axes
+			// We flip the X and Z offsets because entering the 'front' means exiting the 'front'
+			XMFLOAT3 destRight = portal->GetDestination()->GetTransform()->GetRight();
+			XMFLOAT3 destUp = portal->GetDestination()->GetTransform()->GetUp();
+			XMFLOAT3 destForward = portal->GetDestination()->GetTransform()->GetForward();
+			XMVECTOR newPos = XMLoadFloat3(&destPos) - (XMLoadFloat3(&destRight) * xOffset) + (XMLoadFloat3(&destUp) * yOffset) - (XMLoadFloat3(&destForward) * zOffset);
+
+			// Apply the position and the same rotation logic you already have
+			XMStoreFloat3(&cameraPos, newPos);
+			camera->GetTransform()->SetPosition(cameraPos.x, cameraPos.y, cameraPos.z);
 			camera->GetTransform()->SetPitchYawRoll(cameraRot.x, destRot.y + rotDiff, cameraRot.z);
 			portalCoolDown = 0;
 		}
 	}
+}
+
+void Game::TryPlacePortal(int id) {
+	portalPlacementCoolDown = 0;
+	// Cast a ray starting at the camera and going forward
+	XMFLOAT3 rayOrigin = camera->GetTransform()->GetPosition();
+	XMFLOAT3 cameraForward = camera->GetTransform()->GetForward();
+
+	// Convert to XMVECTORs because BoundingBox::Intersects expects XMVECTOR parameters
+	XMVECTOR originV = XMLoadFloat3(&rayOrigin);
+	XMVECTOR dirV = XMLoadFloat3(&cameraForward);
+	XMVECTOR endV = originV + (maxPortalPlacementDistance * dirV);
+	dirV = XMVector3Normalize(dirV);
+
+	for (const auto& pair : entities) {
+		// Only try to place portals on walls
+		if (pair.first.find("wall") == string::npos) {
+			continue; 
+		}
+
+		Entity* entity = pair.second;
+		float hitDist = 0.0f;
+		// Check if the ray intersects with the bounding box
+		entity->GetBoundingBox().Intersects(originV, dirV, hitDist);
+		if (hitDist == 0 || hitDist >= maxPortalPlacementDistance) {
+			// Either it didn't intersect, or it intersected too far away.
+			continue;
+		}
+		cout << "Hit " << pair.first << " at distance " << hitDist << endl;
+
+		// Convert ray points from world space to local space of the entity
+		XMFLOAT3 startPointLocal = entity->GetTransform()->InverseTransformPoint(rayOrigin);
+		XMFLOAT3 endPointLocal;
+		XMStoreFloat3(&endPointLocal, endV);
+		endPointLocal = entity->GetTransform()->InverseTransformPoint(endPointLocal);
+		XMVECTOR startLocalV = XMLoadFloat3(&startPointLocal);
+		XMVECTOR endLocalV = XMLoadFloat3(&endPointLocal);
+
+		// Loop through each triangle in the mesh and check for intersection with the ray.
+		vector<Vertex> vertices = entity->GetMesh()->GetVertices();
+		vector<UINT> indices = entity->GetMesh()->GetIndices();
+		XMFLOAT3 closestPoint = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+		XMVECTOR normalAtClosestPoint = XMVectorSet(0, 0, 0, 0);
+		for (int i = 0; i < indices.size(); i+=3) {
+			Vertex v1 = vertices[indices[i]];
+			Vertex v2 = vertices[indices[i + 1]];
+			Vertex v3 = vertices[indices[i + 2]];
+			XMVECTOR p1 = XMLoadFloat3(&v1.Position);
+			XMVECTOR p2 = XMLoadFloat3(&v2.Position);
+			XMVECTOR p3 = XMLoadFloat3(&v3.Position);
+			XMFLOAT3 intersectionPoint;
+			// Ray intersect triangle
+			if (RayTriangleIntersect(startLocalV, endLocalV - startLocalV, p1, p2, p3, intersectionPoint)) {
+				XMFLOAT3 worldPoint = entity->GetTransform()->TransformPoint(intersectionPoint);
+				XMVECTOR worldPointV = XMLoadFloat3(&worldPoint);
+				XMVECTOR closestPointV = XMLoadFloat3(&closestPoint);
+				if (XMVector3LengthSq(worldPointV - originV).m128_f32[0] < XMVector3LengthSq(closestPointV - originV).m128_f32[0]) {
+					closestPoint = worldPoint;
+					// Calculate the normal at the closest point
+					XMVECTOR edge1 = p2 - p1;
+					XMVECTOR edge2 = p3 - p1;
+					normalAtClosestPoint = XMVector3Cross(edge1, edge2);
+					normalAtClosestPoint = XMVector3Normalize(normalAtClosestPoint);
+				}
+				cout << "World Point: " << worldPoint.x << ", " << worldPoint.y << ", " << worldPoint.z << endl;
+			}
+		}
+		// No triangle intersection found.
+		if (closestPoint.x == FLT_MAX) {
+			continue;
+		}
+		cout << "Closest Point: " << closestPoint.x << ", " << closestPoint.y << ", " << closestPoint.z << endl;
+		string portalKey = "portal_" + to_string(id);
+		// Create portal if it doesn't already exist.
+		if (portals.count(portalKey) == 0) {
+			XMFLOAT3 color = id == 0 ? XMFLOAT3(0, 0, 1.0f) : XMFLOAT3(1, 0.6f, 0);
+			portals.insert({ portalKey, new Portal(meshes[3], materials["portal"], id, color) });
+		}
+		string complimentKey = "portal_" + to_string(abs(1 - id));
+		if (portals.count(complimentKey) > 0) {
+			portals[portalKey]->SetDestination(portals[complimentKey]);
+			portals[complimentKey]->SetDestination(portals[portalKey]);
+		}
+		// Move portal to be flush with the surface, and offset by a small amount to prevent z-fighting.
+		XMFLOAT3 newPosition;
+		XMStoreFloat3(&newPosition, normalAtClosestPoint * portalOffset);
+		newPosition = XMFLOAT3(newPosition.x + closestPoint.x, newPosition.y + closestPoint.y, newPosition.z + closestPoint.z);
+		portals[portalKey]->GetTransform()->SetPosition(newPosition.x, newPosition.y, newPosition.z);
+		// Rotate the portal to be flush with the surface normal.
+		// Note: this only works for placing portals on walls, i.e. only y axis rotation. Placing on the floor/ceiling would require more complex rotation logic.
+		XMVECTOR forward = XMVectorSet(0, 0, 1, 0);
+		float yRot = XMVectorGetX(XMVector3AngleBetweenVectors(forward, normalAtClosestPoint));
+		// If the Cross Product's Y is negative, the angle should be negative
+		XMVECTOR cp = XMVector3Cross(forward, normalAtClosestPoint);
+		if (XMVectorGetY(cp) < 0) {
+			yRot = -yRot;
+		}
+		cout << "Y Rotation: " << yRot << endl;
+		portals[portalKey]->GetTransform()->SetPitchYawRoll(0, yRot, 0);
+		portals[portalKey]->GetTransform()->SetScale(0, 0, 1);
+		if (id == 0) leftPortalTween = 0;
+		else rightPortalTween = 0;
+	}
+}
+
+// Using Moller-Trumbore ray-triangle intersection algorithm. 
+// Returns true if the ray intersects the triangle, and outputs the intersection point.
+bool Game::RayTriangleIntersect(
+	DirectX::XMVECTOR rayOrigin,    // Point 1 of line
+	DirectX::XMVECTOR rayDir,       // Direction (Point 2 - Point 1)
+	DirectX::XMVECTOR V0,           // Triangle Vertex 0
+	DirectX::XMVECTOR V1,           // Triangle Vertex 1
+	DirectX::XMVECTOR V2,           // Triangle Vertex 2
+	DirectX::XMFLOAT3& outPoint     // The actual intersection coordinate
+) {
+	using namespace DirectX;
+
+	XMVECTOR edge1 = V1 - V0;
+	XMVECTOR edge2 = V2 - V0;
+	XMVECTOR pvec = XMVector3Cross(rayDir, edge2);
+	XMVECTOR detVec = XMVector3Dot(edge1, pvec);
+	float det = XMVectorGetX(detVec);
+
+	// If determinant is near zero, ray is parallel to triangle
+	if (det > -0.0001f && det < 0.0001f) return false;
+
+	float invDet = 1.0f / det;
+	XMVECTOR tvec = rayOrigin - V0;
+
+	// Calculate U and test bounds
+	XMVECTOR uVec = XMVector3Dot(tvec, pvec) * invDet;
+	float u = XMVectorGetX(uVec);
+	if (u < 0.0f || u > 1.0f) return false;
+
+	XMVECTOR qvec = XMVector3Cross(tvec, edge1);
+
+	// Calculate V and test bounds
+	XMVECTOR vVec = XMVector3Dot(rayDir, qvec) * invDet;
+	float v = XMVectorGetX(vVec);
+	if (v < 0.0f || u + v > 1.0f) return false;
+
+	// Calculate T (distance along the line)
+	XMVECTOR tResultVec = XMVector3Dot(edge2, qvec) * invDet;
+	float outDistance = XMVectorGetX(tResultVec);
+
+	if (outDistance > 0.0001f) { // Intersection occurs in front of the ray
+		XMVECTOR intersectPos = rayOrigin + (rayDir * outDistance);
+		XMStoreFloat3(&outPoint, intersectPos);
+		return true;
+	}
+
+	return false;
 }
