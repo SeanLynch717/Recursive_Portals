@@ -277,6 +277,7 @@ void Game::CreateMaterials()
 	// Portal Material
 	materials.insert({"portal", new Material(XMFLOAT4(1, 1, 1, 0), portalPixelShader, vertexShader, 0.0f)});
 	materials["portal"]->AddSampler("BasicSampler", sampler);
+	materials["portal"]->GetPixelShader()->SetFloat("borderThickness", portalBorderThickness / 2);
 }
 
 // --------------------------------------------------------
@@ -290,7 +291,7 @@ void Game::CreateBasicGeometry()
 	meshes.push_back(mesh2);
 	Mesh* portalMesh = new Mesh(GetFullPathTo("../../Assets/Models/quad.obj").c_str(), device, context);
 	meshes.push_back(portalMesh);
-	Mesh* newPortalMesh = MeshFactory::CreateCircleMesh(30, device, context);
+	Mesh* newPortalMesh = MeshFactory::CreateCircleMesh(400, device, context);
 	meshes.push_back(newPortalMesh);
 
 	// Create scene mesh.
@@ -340,16 +341,16 @@ void Game::CreateBasicGeometry()
 	//portals["portal_set_2_b"]->SetDestination(portals["portal_set_2_a"]);
 
 	// Third set of portals
-	portals.insert({ "portal_set_3_a", new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255)) });
-	portals["portal_set_3_a"]->GetTransform()->MoveAbsolute(-3.5f, 3, 10 - portalOffset);
-	portals["portal_set_3_a"]->GetTransform()->SetPitchYawRoll(0, PI, 0);
-	portals["portal_set_3_a"]->GetTransform()->SetScale(1, 2, 1);
-	portals.insert({ "portal_set_3_b", new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255)) });
-	portals["portal_set_3_b"]->GetTransform()->MoveAbsolute(-3.5f, 3, -10 + portalOffset);
-	portals["portal_set_3_b"]->GetTransform()->SetPitchYawRoll(0, 0, 0);
-	portals["portal_set_3_b"]->GetTransform()->SetScale(1, 2, 1);
-	portals["portal_set_3_a"]->SetDestination(portals["portal_set_3_b"]);
-	portals["portal_set_3_b"]->SetDestination(portals["portal_set_3_a"]);
+	//portals.insert({ "portal_set_3_a", new Portal(meshes[3], materials["portal"], 0, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255)) });
+	//portals["portal_set_3_a"]->GetTransform()->MoveAbsolute(-3.5f, 3, 10 - portalOffset);
+	//portals["portal_set_3_a"]->GetTransform()->SetPitchYawRoll(0, PI, 0);
+	//portals["portal_set_3_a"]->GetTransform()->SetScale(1, 2, 1);
+	//portals.insert({ "portal_set_3_b", new Portal(meshes[3], materials["portal"], 1, XMFLOAT3(247.0f / 255, 208.0f / 255, 2.0f / 255)) });
+	//portals["portal_set_3_b"]->GetTransform()->MoveAbsolute(-3.5f, 3, -10 + portalOffset);
+	//portals["portal_set_3_b"]->GetTransform()->SetPitchYawRoll(0, 0, 0);
+	//portals["portal_set_3_b"]->GetTransform()->SetScale(1, 2, 1);
+	//portals["portal_set_3_a"]->SetDestination(portals["portal_set_3_b"]);
+	//portals["portal_set_3_b"]->SetDestination(portals["portal_set_3_a"]);
 	//portals[1] = new Portal(meshes[2], materials[3], 1, XMFLOAT3(0, 0, 1));
 	//portals[1]->GetTransform()->MoveAbsolute(10 - portalOffset, 2, 8);
 	//portals[1]->GetTransform()->SetPitchYawRoll(0, -PI/2, 0);
@@ -470,7 +471,7 @@ void Game::Update(float deltaTime, float totalTime)
 		drawWalls = !drawWalls;
 	}
 	if (Input::GetInstance().KeyPress('M')) {
-		portalAnimation = !portalAnimation;
+		camera->ToggleMouse();
 	}
 	if (portalPlacementCoolDown > 0.5f) {
 		if (Input::GetInstance().MouseLeftDown()) {
@@ -490,14 +491,12 @@ void Game::Update(float deltaTime, float totalTime)
 		if (leftPortalTween > 1.0f) {
 			leftPortalTween = 1.0f;
 		}
-		portals["portal_0"]->GetTransform()->SetScale(1.0f * sin(leftPortalTween * PI / 2), 2.0f * sin(leftPortalTween * PI / 2), 1.0f);
 	}
 	if (rightPortalTween != 1.0f) {
 		rightPortalTween += portalTweenSpeed * deltaTime;
 		if (rightPortalTween > 1.0f) {
 			rightPortalTween = 1.0f;
 		}
-		portals["portal_1"]->GetTransform()->SetScale(1.0f * sin(rightPortalTween * PI / 2), 2.0f * sin(rightPortalTween * PI / 2), 1.0f);
 	}
 
 
@@ -531,18 +530,8 @@ void Game::Draw(float deltaTime, float totalTime)
 		1.0f,
 		0);
 
-	for (const auto& pair : portals) {
-		Portal* p = pair.second;
-		SimplePixelShader* ps = p->GetMaterial()->GetPixelShader();
-		if (portalAnimation) {
-			ps->SetFloat("totalTime", totalTime);
-		}
-		else {
-			ps->SetFloat("totalTime", 0);
-		}
-	}
 	// Draw Portals
-	DrawPortals(camera->GetView(), camera->GetProjection(), camera->GetTransform()->GetPosition(), 1, 0);
+	DrawPortals(camera->GetView(), camera->GetProjection(), camera->GetTransform()->GetPosition(), 3, 0);
 	
 	// Present the back buffer to the user
 	//  - Puts the final frame we're drawing into the window so the user can see it
@@ -581,10 +570,17 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 			continue;
 		}
 
-		// Set Depth Stencil State
-		context->OMSetDepthStencilState(stencilWriteMask.Get(), recursionLevel);	
+		// Set portal scale based on tween value for drawing to the stencil buffer
+		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
+		XMFLOAT3 originalScale = portal->GetTransform()->GetScale();
+		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2) - portalBorderThickness), 2.0f * (sin(scale * PI / 2) - portalBorderThickness), 1.0f);
 
+		// Set Depth Stencil State and Draw portal to stencil buffer. 
+		// This isn't actually drawing the portal, but it is incrementing the stencil buffer values in the area of the screen where the portal is.
+		context->OMSetDepthStencilState(stencilWriteMask.Get(), recursionLevel);
 		portal->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
+		// Revert portal scale
+		portal->GetTransform()->SetScale(originalScale.x, originalScale.y, originalScale.z);
 
 		// Calculate the view from the perspective of the out portal
 		XMMATRIX rotationMatrix = XMMatrixRotationAxis(XMVectorSet(0, 1, 0, 0), PI);
@@ -610,7 +606,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 
 		// Base case: 
 		if (recursionLevel == maxRecursion) {
-			// Set depth stencil state
+			// Set depth stencil state,
 			context->OMSetDepthStencilState(innerPortalMask.Get(), recursionLevel + 1);
 			// Clear the depth buffer
 			context->ClearDepthStencilView(
@@ -623,6 +619,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 			
 			// Draw inner most portal outline
 			portal->GetMaterial()->GetPixelShader()->SetInt("drawRecursive", 0);
+			portal->GetMaterial()->GetPixelShader()->SetFloat("scale", scale);
 			portal->GetMaterial()->GetPixelShader()->SetFloat3("borderColor", portal->GetBorderColor());
 			portal->Draw(context, viewDest, newProj, relPos);
 		}
@@ -640,9 +637,11 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 			D3D11_CLEAR_DEPTH,
 			1.0f,
 			0);
-		// Draw portal into stencil buffer. This will undo the stencil bits we incremented, 
+		// Draw portal into stencil buffer. The undoStencilWriteMask decrements the stencil values where the portal is
 		// eventually returning to a buffer full of zeroes.
+		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2) - portalBorderThickness), 2.0f * (sin(scale * PI / 2) - portalBorderThickness), 1.0f);
 		portal->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
+		portal->GetTransform()->SetScale(originalScale.x, originalScale.y, originalScale.z);
 	}
 	
 	// Clear the depth buffer
@@ -657,7 +656,13 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 
 	// Draw each portal (a plane) into the depth buffer
 	for (auto& pair : portals) {
+		// Tween scale for depth drawing
+		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
+		XMFLOAT3 originalScale = pair.second->GetTransform()->GetScale();
+		pair.second->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2) - portalBorderThickness), 2.0f * (sin(scale * PI / 2) - portalBorderThickness), 1.0f);
 		pair.second->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
+		// Revert portal scale
+		pair.second->GetTransform()->SetScale(originalScale.x, originalScale.y, originalScale.z);
 	}
 	
 	// Set depth stencil state
@@ -666,7 +671,9 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 	// Draw portal outline
 	for (auto& pair : portals) {
 		Portal* portal = pair.second;
+		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
 		portal->GetMaterial()->GetPixelShader()->SetInt("drawRecursive", 1);
+		portal->GetMaterial()->GetPixelShader()->SetFloat("scale", scale);
 		portal->GetMaterial()->GetPixelShader()->SetFloat3("borderColor", portal->GetBorderColor());
 		portal->Draw(context, viewMat, projMat, cameraPosition);
 	}
@@ -809,6 +816,7 @@ void Game::TryPlacePortal(int id) {
 		if (portals.count(portalKey) == 0) {
 			XMFLOAT3 color = id == 0 ? XMFLOAT3(0, 0, 1.0f) : XMFLOAT3(1, 0.6f, 0);
 			portals.insert({ portalKey, new Portal(meshes[3], materials["portal"], id, color) });
+			portals[portalKey]->GetTransform()->SetScale(1, 2, 1);
 		}
 		string complimentKey = "portal_" + to_string(abs(1 - id));
 		if (portals.count(complimentKey) > 0) {
@@ -831,7 +839,6 @@ void Game::TryPlacePortal(int id) {
 		}
 		cout << "Y Rotation: " << yRot << endl;
 		portals[portalKey]->GetTransform()->SetPitchYawRoll(0, yRot, 0);
-		portals[portalKey]->GetTransform()->SetScale(0, 0, 1);
 		if (id == 0) leftPortalTween = 0;
 		else rightPortalTween = 0;
 	}

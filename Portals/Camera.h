@@ -20,6 +20,7 @@ public:
 	Transform* GetTransform();
 	float GetFoV();
 	void SetFoV(float fov);
+	void ToggleMouse();
 
 private:
 	DirectX::XMFLOAT4X4 viewMatrix;
@@ -32,4 +33,5 @@ private:
 	float fieldOfView;
 	float aspectRatio;
 	bool initialized = false;
+	bool mouseEnabled = true;
 };

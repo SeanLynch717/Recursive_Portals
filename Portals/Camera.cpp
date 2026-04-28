@@ -53,26 +53,28 @@ void Camera::Update(float dt)
 	GetCursorPos(&current);
 	ScreenToClient(hWnd, &current);
 
-	// Calculate how far it moved from center
-	float dx = dt * mouseLookSpeed * ((float)current.x - center.x);
-	float dy = dt * mouseLookSpeed * ((float)current.y - center.y);
+	if (mouseEnabled) {
+		// Calculate how far it moved from center
+		float dx = dt * mouseLookSpeed * ((float)current.x - center.x);
+		float dy = dt * mouseLookSpeed * ((float)current.y - center.y);
 
-	if (dx != 0 || dy != 0)
-	{
-		if (initialized == true) {
-			// Rotate the transform!SWAP X AND Y!
-			this->transform.Rotate(dy, dx, 0);
+		if (dx != 0 || dy != 0)
+		{
+			if (initialized == true) {
+				// Rotate the transform!SWAP X AND Y!
+				this->transform.Rotate(dy, dx, 0);
 
-			DirectX::XMFLOAT3 rotation = transform.GetPitchYawRoll();
-			float epsilon = .01f;
-			if (rotation.x > PI / 2 - epsilon) transform.SetPitchYawRoll(PI / 2 - epsilon, rotation.y, rotation.z);
-			if (rotation.x < -PI / 2 + epsilon) transform.SetPitchYawRoll(-PI / 2 + epsilon, rotation.y, rotation.z);
+				DirectX::XMFLOAT3 rotation = transform.GetPitchYawRoll();
+				float epsilon = .01f;
+				if (rotation.x > PI / 2 - epsilon) transform.SetPitchYawRoll(PI / 2 - epsilon, rotation.y, rotation.z);
+				if (rotation.x < -PI / 2 + epsilon) transform.SetPitchYawRoll(-PI / 2 + epsilon, rotation.y, rotation.z);
+			}
+			initialized = true;
+			// Force the cursor back to the center
+			POINT screenCenter = center;
+			ClientToScreen(hWnd, &screenCenter);
+			SetCursorPos(screenCenter.x, screenCenter.y);
 		}
-		initialized = true;
-		// Force the cursor back to the center
-		POINT screenCenter = center;
-		ClientToScreen(hWnd, &screenCenter);
-		SetCursorPos(screenCenter.x, screenCenter.y);
 	}
 
 	// At the end, update the view
@@ -123,4 +125,9 @@ void Camera::SetFoV(float fov)
 {
 	fieldOfView = fov;
 	UpdateProjectionMatrix(aspectRatio);
+}
+
+void Camera::ToggleMouse()
+{
+	mouseEnabled = !mouseEnabled;
 }

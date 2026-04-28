@@ -95,7 +95,8 @@ private:
 	// Portal tweens
 	float leftPortalTween = 1.0f;
 	float rightPortalTween = 1.0f;
-	float portalTweenSpeed = 5.0f;
+	float portalTweenSpeed = 2.0f;
+	float portalBorderThickness = 0.1f;
 
 	Entity* virtualCamera[2];
 };
