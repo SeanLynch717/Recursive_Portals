@@ -170,6 +170,28 @@ void Game::Init()
 		float bf[] = { 0.f,0.f,0.f,0.f };
 		context->OMSetBlendState(blendState.Get(), nullptr, 0xFFFFFFFF);
 	}
+	// Create shader resource view for backBuffer sampling
+	D3D11_TEXTURE2D_DESC desc = {};
+	desc.Width = width;
+	desc.Height = height;
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	device->CreateTexture2D(&desc, nullptr, screenCaptureTexture.GetAddressOf());
+	device->CreateShaderResourceView(screenCaptureTexture.Get(), nullptr, screenCaptureSRV.GetAddressOf());
+	// Create rasterizer state to nudge portal plane pixels closer to the camera
+	D3D11_RASTERIZER_DESC rastDesc = {};
+	rastDesc.FillMode = D3D11_FILL_SOLID;
+	rastDesc.CullMode = D3D11_CULL_BACK;    // Don't draw backfaces
+	rastDesc.DepthClipEnable = true;
+	rastDesc.DepthBias = -1000;             // Absolute bias
+	rastDesc.SlopeScaledDepthBias = -1.0f;  // Scale bias based on polygon slope
+	rastDesc.DepthBiasClamp = 0.0f;
+	device->CreateRasterizerState(&rastDesc, portalRastState.GetAddressOf());
+
 	portalCoolDown = 10;
 }
 
@@ -498,7 +520,19 @@ void Game::Update(float deltaTime, float totalTime)
 			rightPortalTween = 1.0f;
 		}
 	}
-
+	if (leftPortalRipple > 0) {
+		leftPortalRipple -= portalRippleOutSpeed;
+		if (leftPortalRipple < 0) {
+			leftPortalRipple = 0;
+		}
+	}
+	if (rightPortalRipple > 0) {
+		rightPortalRipple -= portalRippleOutSpeed;
+		if (rightPortalRipple < 0) {
+			rightPortalRipple = 0;
+		}
+	}
+	materials["portal"]->GetPixelShader()->SetFloat("totalTime", totalTime);
 
 	CheckPortalCollision();
 	portalCoolDown += deltaTime;
@@ -573,7 +607,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 		// Set portal scale based on tween value for drawing to the stencil buffer
 		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
 		XMFLOAT3 originalScale = portal->GetTransform()->GetScale();
-		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2) - portalBorderThickness), 2.0f * (sin(scale * PI / 2) - portalBorderThickness), 1.0f);
+		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2)), 2.0f * (sin(scale * PI / 2)), 1.0f);
 
 		// Set Depth Stencil State and Draw portal to stencil buffer. 
 		// This isn't actually drawing the portal, but it is incrementing the stencil buffer values in the area of the screen where the portal is.
@@ -639,7 +673,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 			0);
 		// Draw portal into stencil buffer. The undoStencilWriteMask decrements the stencil values where the portal is
 		// eventually returning to a buffer full of zeroes.
-		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2) - portalBorderThickness), 2.0f * (sin(scale * PI / 2) - portalBorderThickness), 1.0f);
+		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2)), 2.0f * (sin(scale * PI / 2)), 1.0f);
 		portal->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
 		portal->GetTransform()->SetScale(originalScale.x, originalScale.y, originalScale.z);
 	}
@@ -659,29 +693,45 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 		// Tween scale for depth drawing
 		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
 		XMFLOAT3 originalScale = pair.second->GetTransform()->GetScale();
-		pair.second->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2) - portalBorderThickness), 2.0f * (sin(scale * PI / 2) - portalBorderThickness), 1.0f);
+		pair.second->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2)), 2.0f * (sin(scale * PI / 2)), 1.0f);
 		pair.second->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
 		// Revert portal scale
 		pair.second->GetTransform()->SetScale(originalScale.x, originalScale.y, originalScale.z);
 	}
-	
-	// Set depth stencil state
-	context->OMSetDepthStencilState(portalBorderMask.Get(), recursionLevel);
 
-	// Draw portal outline
+	// Only draw where stencil value >= recursion level
+	// This prevents drawing outside of outside of this level
+	context->OMSetDepthStencilState(gEqualRecursionStencilMask.Get(), recursionLevel);
+	DrawNonPortals(viewMat, projMat, cameraPosition);
+
+	// Copy contents from the back buffer for sampling within the PortalPS
+	ID3D11Resource* backBuffer;
+	backBufferRTV->GetResource(&backBuffer);
+	context->CopyResource(screenCaptureTexture.Get(), backBuffer);
+	backBuffer->Release();
+
+	
+	// Drawing here will do two things:
+	//    a. Draw the colored portal outine
+	//    b. Draw the ripple effect to the portals surface by sampling what we copied from the back buffer
+	context->OMSetDepthStencilState(portalBorderMask.Get(), recursionLevel);
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState> oldState;
+	context->RSGetState(oldState.GetAddressOf());
+	context->RSSetState(portalRastState.Get()); // Nudges portal closer to camera to avoid depth test fighting
 	for (auto& pair : portals) {
 		Portal* portal = pair.second;
 		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
+		float rippleStrength = pair.first == "portal_0" ? leftPortalRipple : rightPortalRipple;
+		portal->GetMaterial()->GetPixelShader()->SetShaderResourceView("SceneCapture", screenCaptureSRV.Get());
 		portal->GetMaterial()->GetPixelShader()->SetInt("drawRecursive", 1);
+		portal->GetMaterial()->GetPixelShader()->SetInt("recursionLevel", recursionLevel);
 		portal->GetMaterial()->GetPixelShader()->SetFloat("scale", scale);
 		portal->GetMaterial()->GetPixelShader()->SetFloat3("borderColor", portal->GetBorderColor());
+		portal->GetMaterial()->GetPixelShader()->SetFloat("portalRippleStrength", rippleStrength);
+
 		portal->Draw(context, viewMat, projMat, cameraPosition);
 	}
-
-	context->OMSetDepthStencilState(gEqualRecursionStencilMask.Get(), recursionLevel);
-	// Only draw where stencil value >= recursion level
-	// This prevents drawing outside of outside of this level
-	DrawNonPortals(viewMat, projMat, cameraPosition);
+	context->RSSetState(oldState.Get()); // Revert rast state
 }
 
 // This method checks if the camera is colliding with a portal, and teleports the camera to the destination portal.
@@ -839,8 +889,14 @@ void Game::TryPlacePortal(int id) {
 		}
 		cout << "Y Rotation: " << yRot << endl;
 		portals[portalKey]->GetTransform()->SetPitchYawRoll(0, yRot, 0);
-		if (id == 0) leftPortalTween = 0;
-		else rightPortalTween = 0;
+		if (id == 0) {
+			leftPortalTween = 0;
+			leftPortalRipple = 1.0f;
+		}
+		else {
+			rightPortalTween = 0;
+			rightPortalRipple = 1.0f;
+		}
 	}
 }
 

@@ -250,4 +250,8 @@ float3 PointLightPBR(Light light, float3 normal, float3 worldPos, float3 camPos,
 	// Combine
 	return (balancedDiff * surfaceColor + spec) * atten * light.Intensity * light.Color;
 }
+
+float EaseOutQuad(float t) {
+	return 1.0f - (1.0f - t) * (1.0f - t);
+}
 #endif

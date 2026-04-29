@@ -67,6 +67,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> portalBorderMask;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> gEqualRecursionStencilMask;
 	Microsoft::WRL::ComPtr<ID3D11BlendState> blendState;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> screenCaptureTexture;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> screenCaptureSRV;
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState> portalRastState;
 	
 	// Shaders and shader-related constructs
 	SimplePixelShader* portalPixelShader;
@@ -97,6 +100,10 @@ private:
 	float rightPortalTween = 1.0f;
 	float portalTweenSpeed = 2.0f;
 	float portalBorderThickness = 0.1f;
+	// Portal ripples
+	float leftPortalRipple = 0.0f;
+	float rightPortalRipple = 0.0f;
+	float portalRippleOutSpeed = 0.01f;
 
 	Entity* virtualCamera[2];
 };
