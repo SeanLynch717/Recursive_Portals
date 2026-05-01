@@ -191,8 +191,6 @@ void Game::Init()
 	rastDesc.SlopeScaledDepthBias = -1.0f;  // Scale bias based on polygon slope
 	rastDesc.DepthBiasClamp = 0.0f;
 	device->CreateRasterizerState(&rastDesc, portalRastState.GetAddressOf());
-
-	portalCoolDown = 10;
 }
 
 // --------------------------------------------------------
@@ -534,10 +532,11 @@ void Game::Update(float deltaTime, float totalTime)
 	}
 	materials["portal"]->GetPixelShader()->SetFloat("totalTime", totalTime);
 
-	CheckPortalCollision();
 	portalCoolDown += deltaTime;
 	portalPlacementCoolDown += deltaTime;
 	camera->Update(deltaTime);
+	CheckPortalCollision();
+	prevPlayerPos = camera->GetTransform()->GetPosition();
 }
 
 void Game::UpdateTransforms(float deltaTime, float totalTime)
@@ -607,7 +606,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 		// Set portal scale based on tween value for drawing to the stencil buffer
 		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
 		XMFLOAT3 originalScale = portal->GetTransform()->GetScale();
-		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2)), 2.0f * (sin(scale * PI / 2)), 1.0f);
+		portal->GetTransform()->SetScale(originalScale.x * (sin(scale * PI / 2)), originalScale.y * (sin(scale * PI / 2)), originalScale.z);
 
 		// Set Depth Stencil State and Draw portal to stencil buffer. 
 		// This isn't actually drawing the portal, but it is incrementing the stencil buffer values in the area of the screen where the portal is.
@@ -673,7 +672,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 			0);
 		// Draw portal into stencil buffer. The undoStencilWriteMask decrements the stencil values where the portal is
 		// eventually returning to a buffer full of zeroes.
-		portal->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2)), 2.0f * (sin(scale * PI / 2)), 1.0f);
+		portal->GetTransform()->SetScale(originalScale.x * (sin(scale * PI / 2)), originalScale.y * (sin(scale * PI / 2)), originalScale.z);
 		portal->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
 		portal->GetTransform()->SetScale(originalScale.x, originalScale.y, originalScale.z);
 	}
@@ -693,7 +692,7 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 		// Tween scale for depth drawing
 		float scale = pair.first == "portal_0" ? leftPortalTween : rightPortalTween;
 		XMFLOAT3 originalScale = pair.second->GetTransform()->GetScale();
-		pair.second->GetTransform()->SetScale(1.0f * (sin(scale * PI / 2)), 2.0f * (sin(scale * PI / 2)), 1.0f);
+		pair.second->GetTransform()->SetScale(originalScale.x * (sin(scale * PI / 2)), originalScale.y * (sin(scale * PI / 2)), originalScale.z);
 		pair.second->UnbindPSAndDraw(context, viewMat, projMat, cameraPosition);
 		// Revert portal scale
 		pair.second->GetTransform()->SetScale(originalScale.x, originalScale.y, originalScale.z);
@@ -737,7 +736,6 @@ void Game::DrawPortals(XMFLOAT4X4 viewMat, XMFLOAT4X4 projMat, XMFLOAT3 cameraPo
 // This method checks if the camera is colliding with a portal, and teleports the camera to the destination portal.
 void Game::CheckPortalCollision()
 {
-	if (portalCoolDown < 1.0f) return;
 	XMFLOAT3 cameraPos = camera->GetTransform()->GetPosition();
 
 	for (auto& pair : portals) {
@@ -746,11 +744,11 @@ void Game::CheckPortalCollision()
 		if (portal->GetDestination() == nullptr) {
 			continue;
 		}
-		// Calculate dot product of the cameras position relative to the portal, and the portal's forward vector.
+		// Calculate the signed distance from the camera to the portal plane
 		XMFLOAT3 portalPos = portal->GetTransform()->GetPosition();
 		XMFLOAT3 diff = XMFLOAT3(cameraPos.x - portalPos.x, cameraPos.y - portalPos.y, cameraPos.z - portalPos.z);
 		XMFLOAT3 forward = portal->GetTransform()->GetForward();
-		float dot = XMVector3Dot(XMLoadFloat3(&diff), XMLoadFloat3(&forward)).m128_f32[0];
+		float forwardDistFromPortal = XMVector3Dot(XMLoadFloat3(&diff), XMLoadFloat3(&forward)).m128_f32[0];
 
 		// Project the cameras position onto the portal plane's axes, and calculate the magnitude of that projection.
 		XMFLOAT3 right = portal->GetTransform()->GetRight();
@@ -760,33 +758,36 @@ void Game::CheckPortalCollision()
 		XMFLOAT3 planeProj = XMFLOAT3((right.x * rightDot) + (up.x * upDot), (right.y * rightDot) + (up.y * upDot), (right.z * rightDot) + (up.z * upDot));
 		float dist = sqrt(pow(planeProj.x, 2) + pow(planeProj.y, 2) + pow(planeProj.z, 2));
 
+		const float threshold = 0.00f;
 		// Check if the camera is on the negative side of the plane, AND the magnitude of the cameras projection 
 		// onto the portal plane is within bounds of the portals frame.
-		if (dot > -0.1f && dot <= 0.5f && dist <= 1) {
+		if (forwardDistFromPortal < threshold && dist <= 1) {
 			XMFLOAT3 destPos = portal->GetDestination()->GetTransform()->GetPosition();
 			XMFLOAT3 portalRot = portal->GetTransform()->GetPitchYawRoll();
 			XMFLOAT3 destRot = portal->GetDestination()->GetTransform()->GetPitchYawRoll();
 			XMFLOAT3 cameraRot = camera->GetTransform()->GetPitchYawRoll();
 			float rotDiff = cameraRot.y + PI - portalRot.y;
-			XMVECTOR xmDiff = XMLoadFloat3(&diff);
+			XMFLOAT3 prevDiff = XMFLOAT3(prevPlayerPos.x - portalPos.x, prevPlayerPos.y - portalPos.y, prevPlayerPos.z - portalPos.z);
+			XMVECTOR xmPrevDiff = XMLoadFloat3(&prevDiff);
 
 			// Calculate local offsets relative to the ENTRANCE portal's axes
-			float xOffset = XMVector3Dot(xmDiff, XMLoadFloat3(&right)).m128_f32[0];
-			float yOffset = XMVector3Dot(xmDiff, XMLoadFloat3(&up)).m128_f32[0];
-			float zOffset = XMVector3Dot(xmDiff, XMLoadFloat3(&forward)).m128_f32[0];
+			float rightOffset = XMVector3Dot(xmPrevDiff, XMLoadFloat3(&right)).m128_f32[0];
+			float upOffset = XMVector3Dot(xmPrevDiff, XMLoadFloat3(&up)).m128_f32[0];
+			float forwardOffset = abs(XMVector3Dot(xmPrevDiff, XMLoadFloat3(&forward)).m128_f32[0]);
 
 			// Reconstruct position relative to the DESTINATION portal's axes
 			// We flip the X and Z offsets because entering the 'front' means exiting the 'front'
 			XMFLOAT3 destRight = portal->GetDestination()->GetTransform()->GetRight();
 			XMFLOAT3 destUp = portal->GetDestination()->GetTransform()->GetUp();
 			XMFLOAT3 destForward = portal->GetDestination()->GetTransform()->GetForward();
-			XMVECTOR newPos = XMLoadFloat3(&destPos) - (XMLoadFloat3(&destRight) * xOffset) + (XMLoadFloat3(&destUp) * yOffset) - (XMLoadFloat3(&destForward) * zOffset);
+			XMVECTOR newPos = XMLoadFloat3(&destPos) - (XMLoadFloat3(&destRight) * rightOffset) + (XMLoadFloat3(&destUp) * upOffset) + (XMLoadFloat3(&destForward) * forwardOffset);
 
 			// Apply the position and the same rotation logic you already have
 			XMStoreFloat3(&cameraPos, newPos);
 			camera->GetTransform()->SetPosition(cameraPos.x, cameraPos.y, cameraPos.z);
 			camera->GetTransform()->SetPitchYawRoll(cameraRot.x, destRot.y + rotDiff, cameraRot.z);
-			portalCoolDown = 0;
+			// Update the view matrix after teleporting it.
+			camera->UpdateViewMatrix();
 		}
 	}
 }
@@ -866,7 +867,7 @@ void Game::TryPlacePortal(int id) {
 		if (portals.count(portalKey) == 0) {
 			XMFLOAT3 color = id == 0 ? XMFLOAT3(0, 0, 1.0f) : XMFLOAT3(1, 0.6f, 0);
 			portals.insert({ portalKey, new Portal(meshes[3], materials["portal"], id, color) });
-			portals[portalKey]->GetTransform()->SetScale(1, 2, 1);
+			portals[portalKey]->GetTransform()->SetScale(portalScale.x, portalScale.y, portalScale.z);
 		}
 		string complimentKey = "portal_" + to_string(abs(1 - id));
 		if (portals.count(complimentKey) > 0) {

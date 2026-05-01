@@ -53,7 +53,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			float dist = length(toCenter);
 			
 			// Ripple Parameters
-			float rippleStrength = 0.01f * EaseOutQuad(portalRippleStrength); 
+			float rippleStrength = 0.02f * EaseOutQuad(portalRippleStrength); 
 			float freq = 20.0f;
 			float speed = 10.0f;
 			

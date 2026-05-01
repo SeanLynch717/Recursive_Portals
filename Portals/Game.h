@@ -88,12 +88,16 @@ private:
 	Sky* skyBox;
 	bool drawSkyBox;
 	bool debugPortals;
-	float portalCoolDown;
+	float portalCoolDown = 0;
 	float portalPlacementCoolDown;
 	bool drawWalls = true;
 	bool portalAnimation;
-	float portalOffset = 0.5f;
+	float portalOffset = 0.01f;
 	float maxPortalPlacementDistance = 50.0f;
+
+	XMFLOAT3 prevPlayerPos = XMFLOAT3(0, 0, 0);
+
+	XMFLOAT3 portalScale = XMFLOAT3(1.2f, 2.4f, 1);
 
 	// Portal tweens
 	float leftPortalTween = 1.0f;
